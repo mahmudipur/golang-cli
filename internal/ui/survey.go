@@ -41,3 +41,59 @@ func PromptProjectDetails() (string, string, error) {
 	}
 	return "", "", fmt.Errorf("invalid project type selected")
 }
+
+// PromptEnvOperation prompts the user to select an operation (add, update, remove)
+func PromptEnvOperation() (string, error) {
+	var operation string
+	prompt := &survey.Select{
+		Message: "What do you want to do?",
+		Options: []string{"add", "update", "remove"},
+	}
+	err := survey.AskOne(prompt, &operation)
+	return operation, err
+}
+
+// PromptEnvKeyValue prompts the user to enter a key-value pair for the .env file
+func PromptEnvKeyValue(operation string) (string, string, error) {
+	var key, value string
+	keyPrompt := &survey.Input{
+		Message: "Enter the environment variable key:",
+	}
+	err := survey.AskOne(keyPrompt, &key)
+	if err != nil {
+		return "", "", err
+	}
+
+	if operation != "remove" {
+		valuePrompt := &survey.Input{
+			Message: "Enter the environment variable value:",
+		}
+		err = survey.AskOne(valuePrompt, &value)
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	return key, value, nil
+}
+
+// PromptSelectKey prompts the user to select a key to update
+func PromptSelectKey(keys []string) (string, error) {
+	var selectedKey string
+	prompt := &survey.Select{
+		Message: "Select the environment variable key to update:",
+		Options: keys,
+	}
+	err := survey.AskOne(prompt, &selectedKey)
+	return selectedKey, err
+}
+
+// PromptNewValue prompts the user to input the new value for the selected key
+func PromptNewValue() (string, error) {
+	var value string
+	prompt := &survey.Input{
+		Message: "Enter the new value:",
+	}
+	err := survey.AskOne(prompt, &value)
+	return value, err
+}

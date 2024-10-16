@@ -47,7 +47,8 @@ func createExpoApp(projectName string) error {
 
 // createBareReactNativeApp initializes a bare React Native app.
 func createBareReactNativeApp(projectName string) error {
-	cmd := exec.Command("npx", "@react-native-community/cli@latest", "init", projectName)
+	// TODO: fix yarn for installing dependencies
+	cmd := exec.Command("npx", "@react-native-community/cli@latest", "init", projectName, "--pm", "npm")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

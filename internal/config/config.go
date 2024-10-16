@@ -10,8 +10,9 @@ import (
 
 // ProjectConfig represents the structure of the project's configuration
 type ProjectConfig struct {
-	ProjectType string `json:"projectType"`
-	CreatedAt   string `json:"createdAt"`
+	ProjectType    string `json:"projectType"`
+	CreatedAt      string `json:"createdAt"`
+	EnvInitialized bool   `json:"envInitialized"`
 }
 
 // ConfigFileName is the name of the config file
@@ -57,8 +58,9 @@ func SaveConfig(projectPath string, config *ProjectConfig) error {
 // InitConfig creates and saves the initial configuration (after project init)
 func InitConfig(projectType, projectPath string) error {
 	config := &ProjectConfig{
-		ProjectType: projectType,
-		CreatedAt:   time.Now().Format(time.RFC3339),
+		ProjectType:    projectType,
+		CreatedAt:      time.Now().Format(time.RFC3339),
+		EnvInitialized: false,
 	}
 	return SaveConfig(projectPath, config)
 }
