@@ -291,12 +291,9 @@ func modifyBabelConfig(projectPath string) error {
 		filePath := filepath.Join(projectPath, fileName)
 
 		if _, err := os.Stat(filePath); err == nil {
-			// Check file type: JS or JSON
 			if strings.HasSuffix(fileName, ".js") {
-				// Handle JavaScript-based babel.config.js
 				return modifyBabelJSConfig(filePath)
 			} else if strings.HasSuffix(fileName, ".babelrc") {
-				// Handle JSON-based .babelrc
 				return modifyBabelJSONConfig(filePath)
 			}
 		}
@@ -304,7 +301,7 @@ func modifyBabelConfig(projectPath string) error {
 	return fmt.Errorf("babel config file not found in project root")
 }
 
-// modifyBabelJSConfig modifies a babel.config.js file to include the react-native-dotenv plugin
+// modifyBabelJSConfig modifies babel.config.js to include the react-native-dotenv plugin
 func modifyBabelJSConfig(filePath string) error {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -328,20 +325,52 @@ func modifyBabelJSConfig(filePath string) error {
 		return nil
 	}
 
-	// Check if plugins array exists
-	if !strings.Contains(string(content), "plugins") {
-		// Add plugins array if it doesn't exist
-		regex := regexp.MustCompile(`(module\.exports\s*=\s*{)`)
-		updatedContent := regex.ReplaceAllString(string(content), "$1\n  plugins: ["+pluginConfig+"],")
-		return os.WriteFile(filePath, []byte(updatedContent), 0644)
+	// Handle the case where babel.config.js is a function returning an object
+	if strings.Contains(string(content), "module.exports = function") {
+		return modifyBabelFunctionJSConfig(filePath, string(content), pluginConfig)
 	}
 
-	// If plugins array exists, append the plugin to the array
-	regex := regexp.MustCompile(`(plugins:\s*\[)`)
-	updatedContent := regex.ReplaceAllString(string(content), `$1`+pluginConfig)
-	err = os.WriteFile(filePath, []byte(updatedContent), 0644)
+	// Handle the case where babel.config.js directly exports an object
+	return modifyBabelObjectJSConfig(filePath, string(content), pluginConfig)
+}
+
+// modifyBabelFunctionJSConfig modifies a babel.config.js function to add the react-native-dotenv plugin
+func modifyBabelFunctionJSConfig(filePath, content, pluginConfig string) error {
+	// We need to locate the return statement and modify the object returned by the function
+	regex := regexp.MustCompile(`(return\s*\{)`)
+	updatedContent := regex.ReplaceAllString(content, "$1\n  plugins: ["+pluginConfig+"],")
+	err := os.WriteFile(filePath, []byte(updatedContent), 0644)
 	if err != nil {
-		return fmt.Errorf("failed to update %s: %v", filePath, err)
+		return fmt.Errorf("failed to update function-based babel.config.js: %v", err)
+	}
+
+	fmt.Printf("Successfully added react-native-dotenv plugin to %s\n", filePath)
+	return nil
+}
+
+// modifyBabelObjectJSConfig modifies a babel.config.js that exports an object directly
+func modifyBabelObjectJSConfig(filePath, content, pluginConfig string) error {
+	// If plugins array does not exist, add it after the presets key if it exists
+	if !strings.Contains(content, "plugins") {
+		if strings.Contains(content, "presets") {
+			// Insert plugins after presets
+			regex := regexp.MustCompile(`(presets:\s*\[.*?\],)`)
+			updatedContent := regex.ReplaceAllString(content, "$1\n  plugins: ["+pluginConfig+"],")
+			return os.WriteFile(filePath, []byte(updatedContent), 0644)
+		} else {
+			// If no presets, just add plugins at the top level
+			regex := regexp.MustCompile(`(module\.exports\s*=\s*\{)`)
+			updatedContent := regex.ReplaceAllString(content, "$1\n  plugins: ["+pluginConfig+"],")
+			return os.WriteFile(filePath, []byte(updatedContent), 0644)
+		}
+	}
+
+	// If plugins array exists, append the plugin
+	regex := regexp.MustCompile(`(plugins:\s*\[)`)
+	updatedContent := regex.ReplaceAllString(content, `$1`+pluginConfig)
+	err := os.WriteFile(filePath, []byte(updatedContent), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to update babel.config.js: %v", err)
 	}
 
 	fmt.Printf("Successfully added react-native-dotenv plugin to %s\n", filePath)
